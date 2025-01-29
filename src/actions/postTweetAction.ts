@@ -66,9 +66,9 @@ export const postTweetAction: Action = {
         //check VERIFIABLE_INFERENCE_ENABLED
         if (
             !(
-                process.env.VERIFIABLE_INFERENCE_ENABLED === "true" &&
-                process.env.PRIMUS_APP_ID &&
-                process.env.PRIMUS_APP_SECRET
+                runtime.getSetting("VERIFIABLE_INFERENCE_ENABLED") === "true" &&
+                runtime.getSetting("PRIMUS_APP_ID") &&
+                runtime.getSetting("PRIMUS_APP_SECRET")
             )
         ) {
             elizaLogger.error(
@@ -79,8 +79,8 @@ export const postTweetAction: Action = {
 
         try {
             if (
-                process.env.TWITTER_DRY_RUN &&
-                process.env.TWITTER_DRY_RUN.toLowerCase() === "true"
+                runtime.getSetting("TWITTER_DRY_RUN") &&
+                runtime.getSetting("TWITTER_DRY_RUN").toLowerCase() === "true"
             ) {
                 elizaLogger.info(
                     `Dry run: would have posted tweet: ${contentYouWantToPost}`
@@ -119,7 +119,7 @@ export const postTweetAction: Action = {
         state?: State
     ) => {
         const hasCredentials =
-            !!process.env.TWITTER_USERNAME && !!process.env.TWITTER_PASSWORD;
+            !!runtime.getSetting("TWITTER_USERNAME") && !!runtime.getSetting("TWITTER_PASSWORD");
         elizaLogger.log(`Has credentials: ${hasCredentials}`);
 
         return hasCredentials;

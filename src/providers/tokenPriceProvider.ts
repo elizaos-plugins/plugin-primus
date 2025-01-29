@@ -4,7 +4,7 @@ import {generateProof, verifyProof} from "../util/primusUtil.ts";
 const tokenPriceProvider: Provider = {
     get: async (runtime: IAgentRuntime, message: Memory, _state?: State) => {
         //get btc price
-        const url = `${process.env.BINANCE_API_URL||'https://api.binance.com'}/api/v3/ticker/price?symbol=${process.env.BINANCE_SYMBOL || 'BTCUSDT'}`;
+        const url = `${runtime.getSetting("BINANCE_API_URL")||'https://api.binance.com'}/api/v3/ticker/price?symbol=${runtime.getSetting("BINANCE_SYMBOL") || 'BTCUSDT'}`;
         const method = 'GET';
         const headers = {
             'Accept	': '*/*',

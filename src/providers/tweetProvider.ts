@@ -17,7 +17,7 @@ const tweetProvider: Provider = {
             elizaLogger.error("Failed to login to Twitter");
             return false;
         }
-        const userName = process.env.TWITTER_USERNAME_WANT_TO_GET_TWEET;
+        const userName = runtime.getSetting("TWITTER_USERNAME_WANT_TO_GET_TWEET");
         if(!userName){
             elizaLogger.error("TWITTER_USERNAME_WANT_TO_GET_TWEET is not set");
             return false;
