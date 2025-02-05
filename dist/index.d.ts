@@ -1,9 +1,19 @@
-declare const twitterPlugin: {
-    name: string;
-    description: string;
-    actions: Action[];
-    evaluators: never[];
-    providers: never[];
-};
+import { IVerifiableInferenceAdapter, VerifiableInferenceOptions, VerifiableInferenceResult, ModelProviderName, Plugin } from '@elizaos/core';
 
-export { twitterPlugin as default, twitterPlugin };
+interface PrimusOptions {
+    appId: string;
+    appSecret: string;
+    attMode: string;
+    modelProvider?: ModelProviderName;
+    token?: string;
+}
+declare class PrimusAdapter implements IVerifiableInferenceAdapter {
+    options: PrimusOptions;
+    constructor(options: PrimusOptions);
+    generateText(context: string, modelClass: string, options?: VerifiableInferenceOptions): Promise<VerifiableInferenceResult>;
+    verifyProof(result: VerifiableInferenceResult): Promise<boolean>;
+}
+
+declare const twitterPlugin: Plugin;
+
+export { PrimusAdapter, twitterPlugin as default, twitterPlugin };

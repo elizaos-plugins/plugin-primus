@@ -42,6 +42,7 @@ var verifyProof = async (attestation) => {
 
 // src/util/twitterScraper.ts
 var TwitterScraper = class {
+  scraper;
   constructor() {
   }
   getScraper() {
@@ -250,8 +251,9 @@ var TwitterScraper = class {
 // src/providers/tokenPriceProvider.ts
 import { elizaLogger as elizaLogger2 } from "@elizaos/core";
 var tokenPriceProvider = {
-  get: async (runtime, message, _state) => {
-    const url = `${runtime.getSetting("BINANCE_API_URL") || "https://api.binance.com"}/api/v3/ticker/price?symbol=${runtime.getSetting("BINANCE_SYMBOL") || "BTCUSDT"}`;
+  // eslint-disable-next-line
+  get: async (_runtime, _message, _state) => {
+    const url = `${process.env.BINANCE_API_URL || "https://api.binance.com"}/api/v3/ticker/price?symbol=${process.env.BINANCE_SYMBOL || "BTCUSDT"}`;
     const method = "GET";
     const headers = {
       "Accept	": "*/*"
@@ -331,14 +333,14 @@ var postTweetAction = {
   ],
   handler: async (runtime, message, state) => {
     const contentYouWantToPost = await tokenPriceProvider.get(runtime, message, state);
-    if (!(runtime.getSetting("VERIFIABLE_INFERENCE_ENABLED") === "true" && runtime.getSetting("PRIMUS_APP_ID") && runtime.getSetting("PRIMUS_APP_SECRET"))) {
+    if (!(process.env.VERIFIABLE_INFERENCE_ENABLED === "true" && process.env.PRIMUS_APP_ID && process.env.PRIMUS_APP_SECRET)) {
       elizaLogger3.error(
         `Parameter 'VERIFIABLE_INFERENCE_ENABLED' not set, Eliza will run this action!`
       );
       return false;
     }
     try {
-      if (runtime.getSetting("TWITTER_DRY_RUN") && runtime.getSetting("TWITTER_DRY_RUN").toLowerCase() === "true") {
+      if (process.env.TWITTER_DRY_RUN && process.env.TWITTER_DRY_RUN.toLowerCase() === "true") {
         elizaLogger3.info(
           `Dry run: would have posted tweet: ${contentYouWantToPost}`
         );
@@ -365,10 +367,76 @@ var postTweetAction = {
   },
   name: "POST_TWEET",
   similes: ["TWEET", "POST", "SEND_TWEET"],
-  validate: async (runtime, message, state) => {
-    const hasCredentials = !!runtime.getSetting("TWITTER_USERNAME") && !!runtime.getSetting("TWITTER_PASSWORD");
+  validate: async (_runtime, _message, _state) => {
+    const hasCredentials = !!process.env.TWITTER_USERNAME && !!process.env.TWITTER_PASSWORD;
     elizaLogger3.log(`Has credentials: ${hasCredentials}`);
     return hasCredentials;
+  }
+};
+
+// src/adapter/primusAdapter.ts
+import {
+  VerifiableInferenceProvider,
+  ModelProviderName,
+  models,
+  elizaLogger as elizaLogger4
+} from "@elizaos/core";
+var PrimusAdapter = class {
+  options;
+  constructor(options) {
+    this.options = options;
+  }
+  async generateText(context, modelClass, options) {
+    const provider = this.options.modelProvider || ModelProviderName.OPENAI;
+    const baseEndpoint = options?.endpoint || models[provider].endpoint;
+    const model = models[provider].model[modelClass];
+    const apiKey = this.options.token;
+    if (!apiKey) {
+      throw new Error(
+        `API key (token) is required for provider: ${provider}`
+      );
+    }
+    let endpoint;
+    let authHeader;
+    let responseParsePath;
+    switch (provider) {
+      case ModelProviderName.OPENAI:
+        endpoint = `${baseEndpoint}/chat/completions`;
+        authHeader = `Bearer ${apiKey}`;
+        responseParsePath = "$.choices[0].message.content";
+        break;
+      default:
+        throw new Error(`Unsupported model provider: ${provider}`);
+    }
+    const headers = {
+      "Content-Type": "application/json",
+      "Authorization": authHeader
+    };
+    try {
+      const body = {
+        model: model.name,
+        messages: [{ role: "user", content: context }],
+        temperature: options?.providerOptions?.temperature || models[provider].model[modelClass].temperature
+      };
+      const attestation = await generateProof(endpoint, "POST", headers, JSON.stringify(body), responseParsePath);
+      elizaLogger4.log("model attestation:", attestation);
+      const responseData = JSON.parse(attestation.data);
+      const text = JSON.parse(responseData.content);
+      return {
+        text,
+        proof: attestation,
+        provider: VerifiableInferenceProvider.PRIMUS,
+        timestamp: Date.now()
+      };
+    } catch (error) {
+      console.error("Error in Primus generateText:", error);
+      throw error;
+    }
+  }
+  async verifyProof(result) {
+    const isValid = verifyProof(result.proof);
+    elizaLogger4.log("Proof is valid:", isValid);
+    return isValid;
   }
 };
 
@@ -382,6 +450,7 @@ var twitterPlugin = {
 };
 var index_default = twitterPlugin;
 export {
+  PrimusAdapter,
   index_default as default,
   twitterPlugin
 };
