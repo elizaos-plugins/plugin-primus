@@ -1,3 +1,5 @@
+# Unmaintained: this plugin needs a maintainer.
+
 # @elizaos/plugin-primus
 
 A plugin to fully verify agent activities, including LLM access, actions, and interactions with external providers,
